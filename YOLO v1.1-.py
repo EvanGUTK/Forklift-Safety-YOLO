@@ -46,7 +46,7 @@ def discover_local_yolo_models(search_roots=None):
                 name = p.name
                 if name not in seen and name.lower().startswith("yolo"):
                     seen.add(name)
-                    found.append(name)  # keep filename; Ultralytics resolves cwd/PYTHONPATH
+                    found.append(name)
         except Exception:
             pass
     found_yolo = [n for n in found if n.lower().startswith("yolo")]
@@ -61,10 +61,6 @@ def dedup_keep_order(seq):
     return out
 
 def build_model_list(env_value: Optional[str]) -> list:
-    """
-    YOLO_MODELS = "ALL" or unset -> full catalog + discovered local yolo*.pt files.
-    Otherwise, use comma-separated list from env.
-    """
     if not env_value or env_value.strip().upper() == "ALL":
         local = discover_local_yolo_models()
         return dedup_keep_order(DEF_ALL_YOLO_DET + local)
@@ -78,7 +74,6 @@ def parse_list_env(name: str, default: str):
     return [t.strip() for t in os.getenv(name, default).split(",") if t.strip()]
 
 def fit_font_scale(text: str, box_w: int, box_h: int, base_scale=0.9):
-    # scale to fit but never let it get tiny; tuned for 1080p sharpness
     scale = base_scale
     (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, scale, 2)
     if tw > box_w * 0.92:
@@ -88,18 +83,15 @@ def fit_font_scale(text: str, box_w: int, box_h: int, base_scale=0.9):
     return max(scale, 0.55)
 
 def put_text_sharp(img, text, org, box_wh=None, color=(255,255,255), base_scale=0.9):
-    # Crisp text: adaptive scale, outline, and thickness based on resolution
     if box_wh:
         bw, bh = box_wh
         scale = fit_font_scale(text, bw, bh, base_scale=base_scale)
     else:
         h, w = img.shape[:2]
-        scale = max(0.65, 0.9 * (w / 1920))  # keep it decent on 1080p+
+        scale = max(0.65, 0.9 * (w / 1920))
     thickness = max(2, int(scale * 2.2))
     ox, oy = org
-    # Outline for contrast
     cv2.putText(img, text, (ox, oy), cv2.FONT_HERSHEY_DUPLEX, scale, (0, 0, 0), thickness + 2, cv2.LINE_AA)
-    # Fill
     cv2.putText(img, text, (ox, oy), cv2.FONT_HERSHEY_DUPLEX, scale, color, thickness, cv2.LINE_AA)
 
 def draw_button(img, rect, label, active=False, palette=None):
@@ -109,7 +101,7 @@ def draw_button(img, rect, label, active=False, palette=None):
     if palette:
         bg = palette.get("btn", bg) if not active else palette.get("active", (78, 78, 78))
     cv2.rectangle(overlay, (x1, y1), (x2, y2), bg, -1)
-    cv2.addWeighted(overlay, 0.92, img, 0.08, 0, img)  # less blur, more contrast
+    cv2.addWeighted(overlay, 0.92, img, 0.08, 0, img)
     bw, bh = x2 - x1, y2 - y1
     fs = fit_font_scale(label, bw, bh)
     (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_DUPLEX, fs, 2)
@@ -139,7 +131,7 @@ def draw_bottom_right_block(img, lines, pad=10, palette=None):
     ov = img.copy()
     bg = (28, 28, 28) if not palette else palette.get("hud_bg", (28, 28, 28))
     cv2.rectangle(ov, (x1, y1), (x2, y2), bg, -1)
-    cv2.addWeighted(ov, 0.78, img, 0.22, 0, img)  # crisper
+    cv2.addWeighted(ov, 0.78, img, 0.22, 0, img)
     col = (255, 255, 255) if not palette else palette.get("text", (255, 255, 255))
     y = y1 + pad + sizes[0][1]
     for i, text in enumerate(lines):
@@ -212,7 +204,6 @@ def draw_notes(img):
         y += 28
 
 # ------------------------- (optional) zones editor -------------------------
-# Left here but disabled by default; press 'D' to toggle.
 def point_in_poly(pt: Tuple[int, int], poly: List[Tuple[int, int]]):
     x, y = pt; inside = False; n = len(poly)
     for i in range(n):
@@ -318,6 +309,29 @@ def release_caps(caps: List[cv2.VideoCapture]):
         try: c.release()
         except Exception: pass
 
+# ------------------------- model (re)loader -------------------------
+def load_model_on_device(weights: str, use_gpu: bool) -> YOLO:
+    """Create a fresh model on the requested device (GPU 0 or CPU)."""
+    m = YOLO(weights)
+    try:
+        if use_gpu and cuda_available():
+            m.to(0)  # cuda:0
+        else:
+            m.to("cpu")
+    except Exception:
+        # Ultralytics handles device in predict; .to is best-effort
+        pass
+    return m
+
+def switch_device_inplace(current_model: YOLO, weights: str, use_gpu: bool) -> YOLO:
+    """Rebuild the model on target device and free old CUDA memory when leaving GPU."""
+    if not use_gpu and cuda_available():
+        try:
+            torch.cuda.empty_cache()
+        except Exception:
+            pass
+    return load_model_on_device(weights, use_gpu)
+
 # ------------------------- inference helpers -------------------------
 def run_predict(model: YOLO, frame, use_gpu_flag: bool, imgsz: int, conf: float, iou: float):
     results = model.predict(
@@ -325,8 +339,8 @@ def run_predict(model: YOLO, frame, use_gpu_flag: bool, imgsz: int, conf: float,
         imgsz=imgsz,
         conf=conf,
         iou=iou,
-        classes=[0],  # person
-        device=device_arg(use_gpu_flag),
+        classes=[0],
+        device=device_arg(use_gpu_flag),  # also pass here for certainty
         verbose=False,
     )
     r = results[0]
@@ -341,10 +355,9 @@ def run_predict(model: YOLO, frame, use_gpu_flag: bool, imgsz: int, conf: float,
                 cx = int((x1 + x2) * 0.5)
                 cy = int((y1 + y2) * 0.5)
                 centers.append((cx, cy))
-                boxes_xyxy.append((int(x1), int(y1), int(x2), int(y2)))  # FIXED packing
+                boxes_xyxy.append((int(x1), int(y1), int(x2), int(y2)))
         except Exception:
             pass
-    # cleaner plot: thinner lines; smaller label text reads better in HD
     return r.plot(line_width=2, labels=True), people_count, centers, boxes_xyxy
 
 def make_grid(images, cols=2):
@@ -358,7 +371,6 @@ def make_grid(images, cols=2):
 
 # ------------------------- app -------------------------
 def run_app():
-    # full model list by default (ALL); set YOLO_MODELS env to customize
     weights_list = build_model_list(os.getenv("YOLO_MODELS", "ALL"))
     cams_list = [int_or_str(x) for x in parse_list_env("CAMS", "0,1,2,3")]
     weights = os.getenv("YOLO_WEIGHTS", weights_list[0] if weights_list else "yolov8s.pt")
@@ -368,7 +380,7 @@ def run_app():
     cam = int_or_str(os.getenv("CAM", "0"))
 
     tile_mode = False
-    use_gpu = True
+    use_gpu = cuda_available()  # start on GPU if available
     show_fps = True
     fps_cap = 0  # 0 = uncapped
 
@@ -381,11 +393,10 @@ def run_app():
     click_xy = None
 
     theme_idx = 0
-    hud_mode = "Verbose"  # or "Minimal"
+    hud_mode = "Verbose"
     trails_on = True
     heatmap_on = False
 
-    # Zones state (DISABLED by default)
     zones_enabled = False
     zones: List[Tuple[List[Tuple[int, int]], str]] = []
     current_zone: List[Tuple[int, int]] = []
@@ -395,7 +406,6 @@ def run_app():
     heatmap = Heatmap(decay=0.94)
 
     def on_mouse(event, x, y, flags, param):
-        # Only record clicks when zone editor is enabled
         nonlocal click_xy, current_zone, zones
         if event == cv2.EVENT_LBUTTONDOWN:
             click_xy = (x, y)
@@ -411,7 +421,7 @@ def run_app():
     shots_dir = Path("shots"); shots_dir.mkdir(exist_ok=True)
     toast_text, toast_until = "", 0.0
 
-    window = "YOLOv8 - Human Detection (v1.8 UTK Senior Edition)"
+    window = "YOLOv8 - Human Detection (v1.9 UTK Senior Edition)"
     cv2.namedWindow(window, cv2.WINDOW_NORMAL)
     cv2.setMouseCallback(window, on_mouse)
 
@@ -420,13 +430,13 @@ def run_app():
     if cuda_available():
         print("device:", gpu_name(), "cuda:", torch.version.cuda)
     else:
-        print("NOTE: CUDA not available. Install the matching cu124/cu121 wheel for your GPU.")
+        print("NOTE: CUDA not available. Install the matching cu wheel for your GPU.")
 
     add_note(f"Session {SESSION_ID} started • weights={weights} • imgsz={imgsz} • cam={cam}")
 
     running = True
     restart_stream = True
-    model = YOLO(weights)
+    model = load_model_on_device(weights, use_gpu)
     caps: List[cv2.VideoCapture] = []
     last_t = None
     fps = 0.0
@@ -442,7 +452,7 @@ def run_app():
                 c = open_cap(cam, imgsz)
                 if c is not None: caps.append(c)
                 tile_mode = False
-            model = YOLO(weights)  # refresh if model changed
+            model = load_model_on_device(weights, use_gpu)
             restart_stream = False
             last_t, fps = None, 0.0
             add_note(f"Stream restarted • tile={tile_mode} • cams={len(caps)}")
@@ -479,7 +489,7 @@ def run_app():
                 restart_stream = True; continue
             disp, people, centers, boxes = run_predict(model, frame, use_gpu, imgsz, conf, iou)
 
-        # overlays: trails + heatmap
+        # overlays
         if trails_on:
             trails.push(centers)
             trails.draw(disp, color=palette.get("accent", (0, 180, 255)))
@@ -588,7 +598,8 @@ def run_app():
             elif point_in_rect(this_click, rects[1]):
                 if weights_list:
                     next_idx = (weights_list.index(weights) + 1) % len(weights_list) if weights in weights_list else 0
-                    weights = weights_list[next_idx]; model = YOLO(weights)
+                    weights = weights_list[next_idx]
+                    model = load_model_on_device(weights, use_gpu)
                     toast_text, toast_until = f"Model: {os.path.basename(weights)}", time.time() + 1.5
                     add_note(f"Model -> {os.path.basename(weights)}")
 
@@ -599,7 +610,7 @@ def run_app():
             px2, py2 = px1 + menu_w, py1 + row_h * 2 + 8
             cv2.rectangle(disp, (px1, py1), (px2, py2), palette.get("hud_bg", (35, 35, 35)), -1)
             dev_label = f"Device: {'GPU' if (use_gpu and cuda_available()) else 'CPU'}"
-            cuda_label = f"CUDA: {gpu_name() if cuda_available() else 'N/A'}"
+            cuda_label = f"{gpu_name() if cuda_available() else 'N/A'}"
             rects = []
             for i, lbl in enumerate([dev_label, cuda_label]):
                 rx1, ry1 = px1 + 6, py1 + 6 + i * row_h
@@ -609,10 +620,13 @@ def run_app():
             if point_in_rect(this_click, rects[0]):
                 if cuda_available():
                     use_gpu = not use_gpu
+                    model = switch_device_inplace(model, weights, use_gpu)
                     toast_text, toast_until = f"Render: {'GPU' if use_gpu else 'CPU'}", time.time() + 1.5
-                    add_note(f"Device -> {'GPU' if use_gpu else 'CPU'}")
+                    add_note(f"Device -> {'GPU' if use_gpu else 'CPU'} (model reloaded)")
                 else:
-                    toast_text, toast_until = "CUDA not available (install cu124/cu121 wheel)", time.time() + 2.0
+                    use_gpu = False
+                    model = switch_device_inplace(model, weights, use_gpu)
+                    toast_text, toast_until = "CUDA not available; using CPU", time.time() + 2.0
 
         # Style menu
         if style_open:
@@ -654,7 +668,6 @@ def run_app():
             fps = 0.9 * fps + 0.1 * (1.0 / dt)
         last_t = now
 
-        # Zones alert (only when enabled)
         if zones_enabled and (centers and zones):
             in_any_zone = any(any(point_in_poly(c, poly) for (poly, _nm) in zones) for c in centers)
             if in_any_zone:
@@ -690,13 +703,15 @@ def run_app():
         elif key == ord(']'):
             if weights_list:
                 idx = (weights_list.index(weights) + 1) % len(weights_list) if weights in weights_list else 0
-                weights = weights_list[idx]; model = YOLO(weights)
+                weights = weights_list[idx]
+                model = load_model_on_device(weights, use_gpu)
                 toast_text, toast_until = f"Model: {os.path.basename(weights)}", time.time() + 1.5
                 add_note(f"Model -> {os.path.basename(weights)}")
         elif key == ord('['):
             if weights_list:
                 idx = (weights_list.index(weights) - 1) % len(weights_list) if weights in weights_list else 0
-                weights = weights_list[idx]; model = YOLO(weights)
+                weights = weights_list[idx]
+                model = load_model_on_device(weights, use_gpu)
                 toast_text, toast_until = f"Model: {os.path.basename(weights)}", time.time() + 1.5
                 add_note(f"Model -> {os.path.basename(weights)}")
 
