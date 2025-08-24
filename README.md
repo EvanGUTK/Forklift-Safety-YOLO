@@ -16,16 +16,21 @@
 - Jetson Xavier for CUDA toolkit
 
 ## Packages (Simple CV)
-import os
-import time
-import math
-import uuid
-from pathlib import Path
-from datetime import datetime
-from collections import deque
-from typing import List, Optional, Union, Tuple
+- import cv2
+- from ultralytics import YOLO
 
 ## Packages (Indepth CV)
+- import os
+- import time
+- import math
+- import uuid
+- from pathlib import Path
+- from datetime import datetime
+- from collections import deque
+- from typing import List, Optional, Union, Tuple
+- import numpy as np
+- import torch
+- import torch.cuda as cuda
 
 ## How to
 - Run code using your favorite IDE to run Python code
