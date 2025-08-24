@@ -39,4 +39,6 @@
 
 ## Features
 - Temperature: Able to change from cam 0,1,2,3 or change model version. Code includes 15 different models to choose from depending on application and hardware.
-- Settings: Include toggle FPS, Frame CAP, Resolution for camera, though, 640p works fine, and Viewangle 
+- Settings: Include toggle FPS, Frame CAP, Resolution for camera, though, 640p works fine, and Viewangle.
+- Render: Render options give the user options to switch from CPU or CUDU devices.
+- Style: Gives user options to change Theme, HUD, Trails, and a Heatmap
