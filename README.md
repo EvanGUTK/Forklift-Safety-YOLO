@@ -36,3 +36,5 @@
 - Run code using your favorite IDE to run Python code
 - e.g. Visual Studio Code, Visual Studio, PyCharm, Spyder, ect
 - Download .py to said IDE and ensure proper packages are installed for which version you choose. If you have a CUDU supported device ensure you install CUDA package that matches your IDE .py firmware. If you are using CPU ensure torchvision is installed.
+
+## Features
