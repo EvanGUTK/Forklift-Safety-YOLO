@@ -16,9 +16,8 @@
 - Jetson Xavier for CUDA toolkit
 
 ## Packages (Simple CV)
--!pip install openCV
-
--!pip install Ultralytics
+- !pip install openCV
+- !pip install Ultralytics
 
 ## Packages (Indepth CV)
 
