@@ -11,3 +11,5 @@
 
 ## Overview
 - This project was inspired from Tesla's FSD. This program is able to detect humans, obstacles, and foreign objects. Once detected the Jetson can then signal the speed governor, siren, lights, or even fully stop the forklift until object or person is out of the way. 
+
+## Features
