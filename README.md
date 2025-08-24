@@ -15,6 +15,12 @@
 - Possible LiDAR for better detection
 - Jetson Xavier for CUDA toolkit
 
-## Packages
+## Packages (Simple CV)
+-!pip install openCV
+-!pip install Ultralytics
+
+## Packages (Indepth CV)
 
 ## How to
+- Run code using your favorite IDE to run Python code
+- e.g. Visual Studio Code, Visual Studio, PyCharm, Spyder, ect
