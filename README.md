@@ -16,8 +16,14 @@
 - Jetson Xavier for CUDA toolkit
 
 ## Packages (Simple CV)
-- Import and install openCV
-- Import and install Ultralytics
+import os
+import time
+import math
+import uuid
+from pathlib import Path
+from datetime import datetime
+from collections import deque
+from typing import List, Optional, Union, Tuple
 
 ## Packages (Indepth CV)
 
