@@ -17,6 +17,7 @@
 
 ## Packages (Simple CV)
 -!pip install openCV
+
 -!pip install Ultralytics
 
 ## Packages (Indepth CV)
