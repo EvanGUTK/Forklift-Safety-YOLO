@@ -38,3 +38,5 @@
 - Download .py to said IDE and ensure proper packages are installed for which version you choose. If you have a CUDU supported device ensure you install CUDA package that matches your IDE .py firmware. If you are using CPU ensure torchvision is installed.
 
 ## Features
+- Temperature: Able to change from cam 0,1,2,3 or change model version. Code includes 15 different models to choose from depending on application and hardware.
+- Settings: Include toggle FPS, Frame CAP, Resolution for camera, though, 640p works fine, and Viewangle 
