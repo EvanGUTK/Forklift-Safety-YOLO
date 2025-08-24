@@ -13,3 +13,8 @@
 - This project was inspired from Tesla's FSD. This program is able to detect humans, obstacles, and foreign objects. Once detected the Jetson can then signal the speed governor, siren, lights, or even fully stop the forklift until object or person is out of the way. 
 
 ## Features
+- Uses 1 to 4 cameras in unison to create a birds-eye-view
+- Uses 1 to 4 ultrasonic sensors to map out its surroundings
+- Uses a single mapper to create a 3D HD layout of forklifts surroundings
+- Possible LiDAR for better detection
+- Jetson Xavier for CUDA toolkit
