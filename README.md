@@ -1,6 +1,6 @@
 # Project Mira – Forklift Safety (YOLO-Based)
 
-![Project Mira Placeholder](path/to/image.png)
+![Project Mira Placeholder](media/YOLO.png)
 
 ---
 
