@@ -1,3 +1,5 @@
+# Proper libraries to import to ensure code runs
+# When you initially run code you will be given option to download libraries
 import cv2
 from ultralytics import YOLO
 
