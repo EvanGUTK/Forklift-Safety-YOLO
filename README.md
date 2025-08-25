@@ -1,44 +1,50 @@
-# Project Mira
+# Project Mira – Forklift Safety (YOLO-Based)
 
-## Forklift Safety (YOLO - Based)
-- This program uses a library called YOLO (You Only Look Once) This library is compiled of images to identify objects and person to help prevent forklift injuries. 
-- The program can be ran using a CUDA device such, the NVIDIA Jetson along with its GPIO ports. 
-- The GPIO ports are used to speak with said forklift to engage its governor  and electronics. 
-- The Jetson will utilize a mapper, ultrasonic sensors, CSI cameras, and LiDAR for mapping is surrounding in memory and live detection.
-## Overview
-- This project was inspired from Tesla's FSD. This program is able to detect humans, obstacles, and foreign objects. Once detected the Jetson can then signal the speed governor, siren, lights, or even fully stop the forklift until object or person is out of the way. 
+![Project Mira Placeholder](path/to/image.png)
 
-## Features
-- Uses 1 to 4 cameras in unison to create a birds-eye-view
-- Uses 1 to 4 ultrasonic sensors to map out its surroundings
-- Uses a single mapper to create a 3D HD layout of forklifts surroundings
-- Possible LiDAR for better detection
-- Jetson Xavier for CUDA toolkit
+---
 
-## Packages (Simple CV)
-- import cv2
-- from ultralytics import YOLO
+## 📌 Overview
+**Project Mira** is a **YOLO (You Only Look Once)–based AI program** designed to enhance forklift safety in industrial environments. By combining advanced computer vision with real-time sensor integration, this system helps **prevent forklift-related injuries** by detecting humans, obstacles, and foreign objects in the vehicle’s path.  
 
-## Packages (Indepth CV)
-- import os
-- import time
-- import math
-- import uuid
-- from pathlib import Path
-- from datetime import datetime
-- from collections import deque
-- from typing import List, Optional, Union, Tuple
-- import numpy as np
-- import torch
-- import torch.cuda as cuda
+The program runs on **CUDA-capable devices** such as the **NVIDIA Jetson Xavier**, leveraging its GPU and GPIO ports to directly communicate with forklift electronics (e.g., governors, sirens, and braking systems).  
 
-## How to
-- Run code using your favorite IDE to run Python code
-- e.g. Visual Studio Code, Visual Studio, PyCharm, Spyder, ect
-- Download .py to said IDE and ensure proper packages are installed for which version you choose. If you have a CUDU supported device ensure you install CUDA package that matches your IDE .py firmware. If you are using CPU ensure torchvision is installed.
+Inspired by **Tesla’s Full Self-Driving (FSD)** principles, Project Mira provides **real-time perception and autonomous safety intervention** using a combination of **CSI cameras, ultrasonic sensors, mappers, and LiDAR**.  
 
-## Features
-- Temperature: Able to change from cam 0,1,2,3 or change model version. Code includes 15 different models to choose from depending on application and hardware.
-- Settings: Include toggle FPS, Frame CAP, Resolution for camera, though, 640p works fine, and Viewangle.
-- Render: Render options give the user options to switch from CPU or CUDU devices.
-- Style: Gives user options to change Theme, HUD, Trails, and a Heatmap
+---
+
+## 🚀 Features
+- **Camera Integration**: Supports 1 to 4 cameras for creating a **dynamic bird’s-eye view**.  
+- **Ultrasonic Sensors**: Uses 1 to 4 sensors for short-range **object detection and mapping**.  
+- **3D Mapping**: Employs a mapper to build a **3D HD layout** of the forklift’s environment.  
+- **LiDAR Support**: Optional integration for enhanced accuracy and detection range.  
+- **CUDA Acceleration**: Runs on **NVIDIA Jetson Xavier** with CUDA toolkit support.  
+- **Active Forklift Control**: Direct GPIO integration allows the system to signal:  
+  - Speed governor  
+  - Safety siren  
+  - Warning lights  
+  - Full forklift stop until the obstruction is cleared  
+
+---
+
+## 🧩 Technical Packages
+
+### Simple CV
+```python
+import cv2
+from ultralytics import YOLO
+```
+### Advance CV
+```python
+import os
+import time
+import math
+import uuid
+from pathlib import Path
+from datetime import datetime
+from collections import deque
+from typing import List, Optional, Union, Tuple
+import numpy as np
+import torch
+import torch.cuda as cuda
+```
