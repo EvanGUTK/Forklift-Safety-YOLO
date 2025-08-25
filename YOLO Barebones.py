@@ -1,16 +1,17 @@
 # Proper libraries to import to ensure code runs
 # When you initially run code you will be given option to download libraries
 import cv2
-from ultralytics import YOLO
+from ultralytics import YOLO # Library I chose 
 
 def main():
 
-    model = YOLO("yolov8n.pt")
+    model = YOLO("yolov8n.pt") # Choosen model
 
-    results = model.predict(source=0, stream=True, imgsz=640, conf=0.25, classes=[0])
+    results = model.predict(source=0, stream=True, imgsz=640, conf=0.25, classes=[0]) # Frame window with tolerance or in AI temperature, uses webcam through cv, and its ideal source
 
-    cv2.namedWindow("YOLOv8", cv2.WINDOW_NORMAL)
+    cv2.namedWindow("YOLOv8", cv2.WINDOW_NORMAL) # Title of window opened thus YOLOv8
 
+    # A loop for above unless error occurs or user chooses to hit ESC key to close
     try:
         for r in results:
             frame = r.plot()
