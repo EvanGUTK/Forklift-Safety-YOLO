@@ -7,7 +7,6 @@ from datetime import datetime
 from collections import deque
 from typing import List, Optional, Union, Tuple
 
-# Prefer DirectShow over MSMF on Windows (reduces noisy logs)
 os.environ.setdefault("OPENCV_VIDEOIO_PRIORITY_MSMF", "0")
 
 import cv2
@@ -16,7 +15,6 @@ import torch
 import torch.cuda as cuda
 from ultralytics import YOLO
 
-# ------------------------- device helpers -------------------------
 def cuda_available() -> bool:
     return cuda.is_available()
 
@@ -26,7 +24,6 @@ def gpu_name() -> str:
 def device_arg(use_gpu: bool):
     return 0 if (use_gpu and cuda_available()) else "cpu"
 
-# ------------------------- YOLO model catalog + discovery -------------------------
 DEF_ALL_YOLO_DET = [
     # YOLOv8
     "yolov8n.pt","yolov8s.pt","yolov8m.pt","yolov8l.pt","yolov8x.pt",
@@ -66,7 +63,6 @@ def build_model_list(env_value: Optional[str]) -> list:
         return dedup_keep_order(DEF_ALL_YOLO_DET + local)
     return [t.strip() for t in env_value.split(",") if t.strip()]
 
-# ------------------------- misc helpers -------------------------
 def int_or_str(x: str):
     return int(x) if x.isdigit() else x
 
@@ -153,7 +149,6 @@ def draw_toast(img, text, until_ts, pad=8, palette=None):
     col = (255, 255, 255) if not palette else palette.get("text", (255, 255, 255))
     put_text_sharp(img, text, (x1 + pad, y2 - pad), (tw, th), color=col, base_scale=fs)
 
-# ------------------------- UTK themes -------------------------
 THEMES = [
     ("Classic", {"btn": (40, 40, 40), "active": (70, 70, 70), "text": (255, 255, 255), "head": (35, 35, 35), "hud_bg": (30, 30, 30), "toast_bg": (20, 20, 20)}),
     ("Vols Orange", {"btn": (30, 60, 150), "active": (45, 90, 210), "text": (255, 255, 255), "head": (30, 80, 200), "accent": (130, 130, 255), "hud_bg": (35, 35, 35), "toast_bg": (25, 25, 25)}),
@@ -175,7 +170,6 @@ def draw_header(img, rect, theme_name):
         palette = THEMES[[t[0] for t in THEMES].index(theme_name)][1]
         cv2.rectangle(img, (x1, y1), (x2, y2), palette.get("head", (35, 35, 35)), -1)
 
-# ------------------------- notes -------------------------
 SESSION_ID = str(uuid.uuid4())[:6]
 NOTES_DIR = Path("notes"); NOTES_DIR.mkdir(exist_ok=True)
 NOTES_FILE = NOTES_DIR / (datetime.now().strftime("log_%Y%m%d.txt"))
@@ -203,7 +197,6 @@ def draw_notes(img):
         put_text_sharp(img, line, (x, y), (int(w*0.6), 32), color=(240,240,240), base_scale=0.8)
         y += 28
 
-# ------------------------- (optional) zones editor -------------------------
 def point_in_poly(pt: Tuple[int, int], poly: List[Tuple[int, int]]):
     x, y = pt; inside = False; n = len(poly)
     for i in range(n):
@@ -221,7 +214,6 @@ def draw_zones(img, zones: List[Tuple[List[Tuple[int, int]], str]], current_zone
     if current_zone:
         cv2.polylines(img, [np.int32(current_zone)], False, (60, 200, 255), 1, cv2.LINE_AA)
 
-# ------------------------- experimental overlays -------------------------
 class Trails:
     def __init__(self, max_len=40, fade=0.90):
         self.points = []
@@ -269,7 +261,6 @@ class Heatmap:
         colored = cv2.applyColorMap(norm, cv2.COLORMAP_JET)
         cv2.addWeighted(colored, 0.18, img, 0.82, 0, img)
 
-# ------------------------- camera management -------------------------
 def capture_size_from_imgsz(imgsz: int):
     if imgsz >= 1280: return (1280, 720)
     if imgsz >= 960:  return (960, 540)
@@ -309,7 +300,6 @@ def release_caps(caps: List[cv2.VideoCapture]):
         try: c.release()
         except Exception: pass
 
-# ------------------------- model (re)loader -------------------------
 def load_model_on_device(weights: str, use_gpu: bool) -> YOLO:
     """Create a fresh model on the requested device (GPU 0 or CPU)."""
     m = YOLO(weights)
@@ -319,7 +309,6 @@ def load_model_on_device(weights: str, use_gpu: bool) -> YOLO:
         else:
             m.to("cpu")
     except Exception:
-        # Ultralytics handles device in predict; .to is best-effort
         pass
     return m
 
@@ -332,7 +321,6 @@ def switch_device_inplace(current_model: YOLO, weights: str, use_gpu: bool) -> Y
             pass
     return load_model_on_device(weights, use_gpu)
 
-# ------------------------- inference helpers -------------------------
 def run_predict(model: YOLO, frame, use_gpu_flag: bool, imgsz: int, conf: float, iou: float):
     results = model.predict(
         source=frame,
@@ -340,7 +328,7 @@ def run_predict(model: YOLO, frame, use_gpu_flag: bool, imgsz: int, conf: float,
         conf=conf,
         iou=iou,
         classes=[0],
-        device=device_arg(use_gpu_flag),  # also pass here for certainty
+        device=device_arg(use_gpu_flag),
         verbose=False,
     )
     r = results[0]
@@ -369,7 +357,6 @@ def make_grid(images, cols=2):
     while len(rs) < rows * cols: rs.append(np.zeros_like(rs[0]))
     return cv2.vconcat([cv2.hconcat(rs[r * cols: (r + 1) * cols]) for r in range(rows)])
 
-# ------------------------- app -------------------------
 def run_app():
     weights_list = build_model_list(os.getenv("YOLO_MODELS", "ALL"))
     cams_list = [int_or_str(x) for x in parse_list_env("CAMS", "0,1,2,3")]
@@ -379,10 +366,11 @@ def run_app():
     iou = 0.60
     cam = int_or_str(os.getenv("CAM", "0"))
 
+# Ensure CUDA is used if user has CUDA hardware
     tile_mode = False
-    use_gpu = cuda_available()  # start on GPU if available
+    use_gpu = cuda_available()
     show_fps = True
-    fps_cap = 0  # 0 = uncapped
+    fps_cap = 0 
 
     settings_open = False
     temp_open = False
@@ -467,7 +455,6 @@ def run_app():
         palette = THEMES[theme_idx][1]
         theme_name = THEMES[theme_idx][0]
 
-        # ---- read + predict ----
         if tile_mode and len(caps) > 1:
             frames_for_grid = []; total_people = 0; all_ok = True
             all_centers = []; all_boxes = []
@@ -489,7 +476,6 @@ def run_app():
                 restart_stream = True; continue
             disp, people, centers, boxes = run_predict(model, frame, use_gpu, imgsz, conf, iou)
 
-        # overlays
         if trails_on:
             trails.push(centers)
             trails.draw(disp, color=palette.get("accent", (0, 180, 255)))
@@ -497,7 +483,6 @@ def run_app():
             heatmap.update(disp.shape, boxes)
             heatmap.draw(disp)
 
-        # ---- header & menus ----
         h, w = disp.shape[:2]
         gap = max(8, int(0.01 * w))
         bar_h = max(44, int(0.08 * h))
@@ -535,7 +520,6 @@ def run_app():
             except Exception:
                 pass
 
-        # Settings menu
         if settings_open:
             menu_w = bw; row_h = int(bar_h * 0.95)
             px1, py1 = r_settings[0], r_settings[3] + 4
@@ -563,7 +547,6 @@ def run_app():
             elif point_in_rect(this_click, rects[3]):
                 tile_mode = not tile_mode; restart_stream = True; add_note(f"View -> {'Tiled' if tile_mode else 'Single'}")
 
-        # Temp menu
         if temp_open:
             menu_w = bw; row_h = int(bar_h * 0.95)
             px1, py1 = r_temp[0], r_temp[3] + 4
@@ -603,7 +586,6 @@ def run_app():
                     toast_text, toast_until = f"Model: {os.path.basename(weights)}", time.time() + 1.5
                     add_note(f"Model -> {os.path.basename(weights)}")
 
-        # Render menu
         if render_open:
             menu_w = bw; row_h = int(bar_h * 0.95)
             px1, py1 = r_render[0], r_render[3] + 4
@@ -628,7 +610,6 @@ def run_app():
                     model = switch_device_inplace(model, weights, use_gpu)
                     toast_text, toast_until = "CUDA not available; using CPU", time.time() + 2.0
 
-        # Style menu
         if style_open:
             menu_w = bw; row_h = int(bar_h * 0.95)
             px1, py1 = r_style[0], r_style[3] + 4
@@ -658,10 +639,8 @@ def run_app():
             elif point_in_rect(this_click, rects[4]):
                 heatmap_on = not heatmap_on; add_note(f"Heatmap -> {'on' if heatmap_on else 'off'}")
 
-        # clear click
         click_xy = None
 
-        # FPS calc + HUD
         now = time.time()
         if last_t is not None:
             dt = max(now - last_t, 1e-6)
